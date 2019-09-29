@@ -15,6 +15,15 @@ module.exports = {
 		responseData.data = data;
 		res.status(httpCode).json(responseData);
 	},
+	// 响应客户端
+	send2Client(res, httpCode = 500, status, data = {}) {
+		let responseData = {};
+		responseData.code = status.code;
+		responseData.message = status.message;
+		responseData.timestamp = new Date().getTime();
+		responseData.data = data;
+		res.status(httpCode).json(responseData);
+	},
 	// 时间 格式化成 2018-12-12 12:12:00
 	timestampToTime(timestamp) {
 		const date = new Date(timestamp);

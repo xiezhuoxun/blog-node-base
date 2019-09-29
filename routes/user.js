@@ -2,14 +2,14 @@ const fetch = require('node-fetch');
 const CONFIG = require('../app.config.js');
 const User = require('../models/user');
 // const OAuth = require('../models/oauth');
-import { MD5_SUFFIX, responseClient, md5 } from '../util/util.js';
+import { MD5_SUFFIX, send2Client, md5 } from '../util/util.js';
 import * as StatusCode from '../util/StatusCode';
 
 // 第三方授权登录的用户信息
 exports.getUser = (req, res) => {
   let { code } = req.body;
   if (!code) {
-    responseClient(res, 400, 2, 'code 缺失');
+    send2Client(res, 400, 2, 'code 缺失');
     return;
   }
   let path = CONFIG.GITHUB.access_token_url;
@@ -55,7 +55,7 @@ exports.getUser = (req, res) => {
                 if (userInfo) {
                   //登录成功后设置session
                   req.session.userInfo = userInfo;
-                  responseClient(res, 200, 0, '授权登录成功', userInfo);
+                  send2Client(res, 200, 0, '授权登录成功', userInfo);
                 } else {
                   let obj = {
                     github_id: response.id,
@@ -71,16 +71,16 @@ exports.getUser = (req, res) => {
                   user.save().then(data => {
                     // console.log('data :', data);
                     req.session.userInfo = data;
-                    responseClient(res, 200, 0, '授权登录成功', data);
+                    send2Client(res, 200, 0, '授权登录成功', data);
                   });
                 }
               })
               .catch(err => {
-                responseClient(res);
+                send2Client(res);
                 return;
               });
           } else {
-            responseClient(res, 400, 1, '授权登录失败', response);
+            send2Client(res, 400, 1, '授权登录失败', response);
           }
         });
     })
@@ -90,58 +90,41 @@ exports.getUser = (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  let { email, password } = req.body;
+  let { email, password } = req.body.data;
   if (!email) {
-    responseClient(res, 200, StatusCode.EMPTY_EMAIL, '用户邮箱不可为空');
+    send2Client(res, 200, StatusCode.EMPTY_EMAIL);
     return;
   }
   if (!password) {
-    responseClient(res, 200, StatusCode.EMPTY_PWD, '密码不可为空');
+    send2Client(res, 200, StatusCode.EMPTY_PWD);
     return;
   }
   try {
     let userInfo = await User.findOne({ email });
     if (!userInfo) {
-      responseClient(res, 200, StatusCode.NO_USER, '用户名不存在!');
+      send2Client(res, 200, StatusCode.NO_USER);
     } else {
       userInfo = await User.findOne({ email, password: md5(password + MD5_SUFFIX) });
       console.log("获取到了用户信息")
       if (userInfo) {
         //登录成功后设置session
         req.session.userInfo = userInfo;
-        responseClient(res, 200, StatusCode.OK, '登录成功', userInfo);
+        send2Client(res, 200, StatusCode.OK, userInfo);
       } else {
-        responseClient(res, 200, StatusCode.ERROR_PWD, '密码错误!');
+        send2Client(res, 200, StatusCode.ERROR_PWD);
       }
     }
   } catch (error) {
-    responseClient(res);
+    send2Client(res);
   }
-
-  // User.findOne({
-  //   email,
-  //   password: md5(password + MD5_SUFFIX),
-  // })
-  //   .then(userInfo => {
-  //     if (userInfo) {
-  //       //登录成功后设置session
-  //       req.session.userInfo = userInfo;
-  //       responseClient(res, 200, 0, '登录成功', userInfo);
-  //     } else {
-  //       responseClient(res, 400, 1, '用户名或者密码错误');
-  //     }
-  //   })
-  //   .catch(err => {
-  //     responseClient(res);
-  //   });
 };
 
 //用户验证
 exports.userInfo = (req, res) => {
   if (req.session.userInfo) {
-    responseClient(res, 200, 0, '', req.session.userInfo);
+    send2Client(res, 200, 0, '', req.session.userInfo);
   } else {
-    responseClient(res, 200, 1, '请重新登录', req.session.userInfo);
+    send2Client(res, 200, 1, '请重新登录', req.session.userInfo);
   }
 };
 
@@ -166,18 +149,18 @@ exports.currentUser = (req, res) => {
         key: '330100',
       },
     };
-    responseClient(res, 200, 0, '', user);
+    send2Client(res, 200, 0, '', user);
   } else {
-    responseClient(res, 200, 1, '请重新登录', user);
+    send2Client(res, 200, 1, '请重新登录', user);
   }
 };
 
 exports.logout = (req, res) => {
   if (req.session.userInfo) {
     req.session.userInfo = null; // 删除session
-    responseClient(res, 200, 0, '登出成功！！');
+    send2Client(res, 200, 0, '登出成功！！');
   } else {
-    responseClient(res, 200, 1, '您还没登录！！！');
+    send2Client(res, 200, 1, '您还没登录！！！');
   }
 };
 
@@ -185,33 +168,33 @@ exports.loginAdmin = async (req, res) => {
   let { email, password } = req.body;
   console.log(email, password);
   if (!email) {
-    responseClient(res, 200, StatusCode.EMPTY_EMAIL, '用户邮箱不可为空');
+    send2Client(res, 200, StatusCode.EMPTY_EMAIL, '用户邮箱不可为空');
     return;
   }
   if (!password) {
-    responseClient(res, 200, StatusCode.EMPTY_PWD, '密码不可为空');
+    send2Client(res, 200, StatusCode.EMPTY_PWD, '密码不可为空');
     return;
   }
   try {
     let userInfo = await User.findOne({ email });
     if (!userInfo) {
-      responseClient(res, 200, StatusCode.NO_USER, '用户名不存在!');
+      send2Client(res, 200, StatusCode.NO_USER, '用户名不存在!');
     } else {
       userInfo = await User.findOne({ email, password: md5(password + MD5_SUFFIX) });
       if (!userInfo) {
-        responseClient(res, 200, StatusCode.ERROR_PWD, '密码错误!');
+        send2Client(res, 200, StatusCode.ERROR_PWD, '密码错误!');
         return;
       }
       if (userInfo.type === 0) {
         //登录成功后设置session
         req.session.userInfo = userInfo;
-        responseClient(res, 200, StatusCode.OK, '登录成功', userInfo);
+        send2Client(res, 200, StatusCode.OK, '登录成功', userInfo);
       } else {
-        responseClient(res, 200, StatusCode.ONLY_ADMIN_USER, '只有管理员才能登录后台！');
+        send2Client(res, 200, StatusCode.ONLY_ADMIN_USER, '只有管理员才能登录后台！');
       }
     }
   } catch (error) {
-    responseClient(res);
+    send2Client(res);
   }
   // User.findOne({
   //   email,
@@ -222,45 +205,45 @@ exports.loginAdmin = async (req, res) => {
   //       if (userInfo.type === 0) {
   //         //登录成功后设置session
   //         req.session.userInfo = userInfo;
-  //         responseClient(res, 200, StatusCode.OK, '登录成功', userInfo);
+  //         send2Client(res, 200, StatusCode.OK, '登录成功', userInfo);
   //       } else {
-  //         responseClient(res, 200, StatusCode.ONLY_ADMIN_USER, '只有管理员才能登录后台！');
+  //         send2Client(res, 200, StatusCode.ONLY_ADMIN_USER, '只有管理员才能登录后台！');
   //       }
   //     } else {
-  //       responseClient(res, 200, 1, '用户名或者密码错误');
+  //       send2Client(res, 200, 1, '用户名或者密码错误');
   //     }
   //   })
   //   .catch(err => {
-  //     responseClient(res);
+  //     send2Client(res);
   //   });
 };
 
 exports.register = (req, res) => {
   let { name, password, phone, email, introduce, type } = req.body;
   if (!email) {
-    responseClient(res, 400, 2, '用户邮箱不可为空');
+    send2Client(res, 400, 2, '用户邮箱不可为空');
     return;
   }
   const reg = new RegExp(
     '^[a-z0-9]+([._\\-]*[a-z0-9])*@([a-z0-9]+[-a-z0-9]*[a-z0-9]+.){1,63}[a-z0-9]+$',
   ); //正则表达式
   if (!reg.test(email)) {
-    responseClient(res, 400, 2, '请输入格式正确的邮箱！');
+    send2Client(res, 400, 2, '请输入格式正确的邮箱！');
     return;
   }
   if (!name) {
-    responseClient(res, 400, 2, '用户名不可为空');
+    send2Client(res, 400, 2, '用户名不可为空');
     return;
   }
   if (!password) {
-    responseClient(res, 400, 2, '密码不可为空');
+    send2Client(res, 400, 2, '密码不可为空');
     return;
   }
   //验证用户是否已经在数据库中
   User.findOne({ email: email })
     .then(data => {
       if (data) {
-        responseClient(res, 200, 1, '用户邮箱已存在！');
+        send2Client(res, 200, 1, '用户邮箱已存在！');
         return;
       }
       //保存到数据库
@@ -273,11 +256,11 @@ exports.register = (req, res) => {
         introduce,
       });
       user.save().then(data => {
-        responseClient(res, 200, 0, '注册成功', data);
+        send2Client(res, 200, 0, '注册成功', data);
       });
     })
     .catch(err => {
-      responseClient(res);
+      send2Client(res);
       return;
     });
 };
@@ -287,13 +270,13 @@ exports.delUser = (req, res) => {
   User.deleteMany({ _id: id })
     .then(result => {
       if (result.n === 1) {
-        responseClient(res, 200, 0, '用户删除成功!');
+        send2Client(res, 200, 0, '用户删除成功!');
       } else {
-        responseClient(res, 200, 1, '用户不存在');
+        send2Client(res, 200, 1, '用户不存在');
       }
     })
     .catch(err => {
-      responseClient(res);
+      send2Client(res);
     });
 };
 
@@ -340,7 +323,7 @@ exports.getUserList = (req, res) => {
           // throw error;
         } else {
           responseData.list = result;
-          responseClient(res, 200, 0, 'success', responseData);
+          send2Client(res, 200, 0, 'success', responseData);
         }
       });
     }

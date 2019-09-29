@@ -50,13 +50,14 @@ const StatusCode = require('./util/StatusCode');
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
 	if (req.method !== 'POST') {
-		Utils.responseClient(res, 200, StatusCode.NO_POST, '不支持非POST方法!');
-	} else {
-		next();
+		Utils.send2Client(res, 200, StatusCode.NO_POST);
+		return;
 	}
-	// responseClient(res, 200, StatusCode.OK, '请使用POST方法请求数据!', userInfo);
-	// next(createError(404));
-
+	if (req.url !== '/') {
+		Utils.send2Client(res, 200, StatusCode.NO_URL);
+		return;
+	}
+	next();
 });
 
 // error handler
