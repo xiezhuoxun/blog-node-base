@@ -181,36 +181,58 @@ exports.logout = (req, res) => {
   }
 };
 
-exports.loginAdmin = (req, res) => {
+exports.loginAdmin = async (req, res) => {
   let { email, password } = req.body;
+  console.log(email, password);
   if (!email) {
-    responseClient(res, 400, 2, '用户邮箱不可为空');
+    responseClient(res, 200, StatusCode.EMPTY_EMAIL, '用户邮箱不可为空');
     return;
   }
   if (!password) {
-    responseClient(res, 400, 2, '密码不可为空');
+    responseClient(res, 200, StatusCode.EMPTY_PWD, '密码不可为空');
     return;
   }
-  User.findOne({
-    email,
-    password: md5(password + MD5_SUFFIX),
-  })
-    .then(userInfo => {
-      if (userInfo) {
-        if (userInfo.type === 0) {
-          //登录成功后设置session
-          req.session.userInfo = userInfo;
-          responseClient(res, 200, 0, '登录成功', userInfo);
-        } else {
-          responseClient(res, 403, 1, '只有管理员才能登录后台！');
-        }
-      } else {
-        responseClient(res, 400, 1, '用户名或者密码错误');
+  try {
+    let userInfo = await User.findOne({ email });
+    if (!userInfo) {
+      responseClient(res, 200, StatusCode.NO_USER, '用户名不存在!');
+    } else {
+      userInfo = await User.findOne({ email, password: md5(password + MD5_SUFFIX) });
+      if (!userInfo) {
+        responseClient(res, 200, StatusCode.ERROR_PWD, '密码错误!');
+        return;
       }
-    })
-    .catch(err => {
-      responseClient(res);
-    });
+      if (userInfo.type === 0) {
+        //登录成功后设置session
+        req.session.userInfo = userInfo;
+        responseClient(res, 200, StatusCode.OK, '登录成功', userInfo);
+      } else {
+        responseClient(res, 200, StatusCode.ONLY_ADMIN_USER, '只有管理员才能登录后台！');
+      }
+    }
+  } catch (error) {
+    responseClient(res);
+  }
+  // User.findOne({
+  //   email,
+  //   password: md5(password + MD5_SUFFIX),
+  // })
+  //   .then(userInfo => {
+  //     if (userInfo) {
+  //       if (userInfo.type === 0) {
+  //         //登录成功后设置session
+  //         req.session.userInfo = userInfo;
+  //         responseClient(res, 200, StatusCode.OK, '登录成功', userInfo);
+  //       } else {
+  //         responseClient(res, 200, StatusCode.ONLY_ADMIN_USER, '只有管理员才能登录后台！');
+  //       }
+  //     } else {
+  //       responseClient(res, 200, 1, '用户名或者密码错误');
+  //     }
+  //   })
+  //   .catch(err => {
+  //     responseClient(res);
+  //   });
 };
 
 exports.register = (req, res) => {

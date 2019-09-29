@@ -1,6 +1,7 @@
 /*
 *所有的路由接口
 */
+const root = require('./root');
 const user = require('./user');
 const article = require('./article');
 const comment = require('./comment');
@@ -12,6 +13,7 @@ const timeAxis = require('./timeAxis');
 const project = require('./project');
 
 module.exports = app => {
+	app.post('/', root.baseRequest);
 	app.post('/login', user.login);
 	app.post('/logout', user.logout);
 	app.post('/loginAdmin', user.loginAdmin);
